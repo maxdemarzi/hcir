@@ -1,12 +1,6 @@
 require 'set'
 require 'neography'
 
-def prepare_files
-    File.open("publication_details", "w") do |file|
-      file.puts "id" + "\t" + "title" + "\t" + "primary_author_id" + "\t" + "readers" + "\t" + "year" + "\t" + "publication_id"  
-    end
-end
-
 def get_json(line)
   Oj.load(line.split("\t")[1])
 end
@@ -14,13 +8,14 @@ end
 def generate_data
   publications        = File.open("data/publications", "r")
   countries           = Set.new ["Unknown"]
-  journals            = Set.new
+  journals            = Set.new ["Unknown"]
   authors             = Set.new
   reader_countries    = []
   reader_disciplines  = []
   reader_statuses     = []
   author_publications = []
-  
+  publication_details = []
+    
   while (line = publications.gets)
     json_hash = get_json(line)
     
@@ -58,18 +53,25 @@ def generate_data
 
     journal_hash = json_hash["published_in"]
     journals.add(journal_hash) if journal_hash
-    
+        
+    publication_details << {"id" => json_hash["id"],
+                            "title" => json_hash["title"],
+                            "primary_author_id" => line.split("\t")[0],
+                            "readers" => json_hash["stats"]["readers"],
+                            "year" => json_hash["year"],
+                            "published_in" => json_hash["published_in"] || "Unknown" }
+                            
   end
-  
   @countries = countries.to_a
-  @journals = journals.to_a
+  @journals = {}
+  journals.to_a.each_with_index do |journal, index|
+    @journals["#{journal}"] = index
+  end
   @authors = {}
   authors.to_a.each_with_index do |author, index|
     @authors["#{author}"] = index
   end
-  
-  
-  
+    
   File.open("data/countries", "w") do |file|
     file.puts "id" + "\t" + "name"  
     @countries.each_with_index do |country, index|
@@ -108,8 +110,8 @@ def generate_data
 
   File.open("data/journals", "w") do |file|
     file.puts "id" + "\t" + "name"  
-    @journals.each_with_index do |journal, index|
-      file.puts "#{index + 1}\t#{journal}"
+    @journals.each_pair do |key, value|
+      file.puts "#{value + 1}\t#{key}"
     end
   end
 
@@ -134,6 +136,15 @@ def generate_data
   end
   
   puts "Generated #{author_publications.size} author publications"
+
+  File.open("data/publication_details", "w") do |file|
+    file.puts "id" + "\t" + "title" + "\t" + "primary_author_id" + "\t" + "readers" + "\t" + "year" + "\t" + "publication_id"
+    publication_details.each do |pd|
+      file.puts "#{pd["id"]}\t#{pd["title"]}\t#{pd["primary_author_id"]}\t#{pd["readers"]}\t#{pd["year"]}\t#{@journals[pd["published_in"]] + 1}"
+    end  
+  end
+
+  puts "Generated #{publication_details.size} publication details"
 
 end
 
