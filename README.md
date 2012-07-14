@@ -3,20 +3,22 @@ hcir
 
 HCIR Challenge Project - https://sites.google.com/site/hcirworkshop/hcir-2012/challenge
 
-Cleaning Data
--------------
-
-    tr -s '\r' ' ' < profiles > profiles2
-    tr -s '"' ' ' < profiles2 > profiles3
-    tr -s '"' ' ' < public_groups > public_groups2
-
-Loading Data
+Generating Data
 ------------
 
     sudo apt-get install postgresql
     rake data:generate
     cp data /tmp
     copy all your data files (received from dropbox) to /tmp so Postgres can load them without issue
+
+Cleaning Data
+-------------
+
+    tr -s '\r' ' ' < profiles > profiles2
+    tr -s '"' ' ' < profiles2 > profiles3
+    tr -s '"' ' ' < public_groups > public_groups2
+    tr -s '"' ' ' < publication_details > publication_details2
+
 
 Loading Data
 ------------
@@ -60,5 +62,5 @@ Loading Data
 	CREATE TABLE reader_disciplines (publication_id varchar(50), discipline_id integer, nbr_of_readers int);
 	COPY reader_disciplines FROM '/tmp/reader_disciplines' DELIMITER E'\t' CSV HEADER;
 
-	CREATE TABLE publication_details (id varchar(50), title varchar(255), primary_author_id integer, readers integer, publication_id integer);
-	COPY publication_details FROM '/tmp/publication_details' DELIMITER E'\t' CSV HEADER;
+	CREATE TABLE publication_details (id varchar(50), title varchar(500), primary_author_id integer, readers integer, year integer, publication_id integer);
+	COPY publication_details FROM '/tmp/publication_details2' DELIMITER E'\t' CSV HEADER;
