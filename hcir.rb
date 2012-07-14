@@ -63,7 +63,12 @@ def generate_data
   
   @countries = countries.to_a
   @journals = journals.to_a
-  @authors = authors.to_a
+  @authors = {}
+  authors.to_a.each_with_index do |author, index|
+    @authors["#{author}"] = index
+  end
+  
+  
   
   File.open("data/countries", "w") do |file|
     file.puts "id" + "\t" + "name"  
@@ -72,6 +77,8 @@ def generate_data
     end
   end
 
+  puts "Generated #{@countries.size} countries"
+
   File.open("data/reader_countries", "w") do |file|
     file.puts "publication_id" + "\t" + "country_id" + "\t" + "nbr_of_readers"
     reader_countries.each do |rc|
@@ -79,13 +86,16 @@ def generate_data
     end  
   end
 
+  puts "Generated #{reader_countries.size} reader_countries"
+
   File.open("data/reader_disciplines", "w") do |file|
     file.puts "publication_id" + "\t" + "discipline_id" + "\t" + "nbr_of_readers"  
     reader_disciplines.each do |rd|
       file.puts "#{rd[0]}\t#{rd[1]}\t#{rd[2]}"
     end  
-
   end
+  
+  puts "Generated #{reader_disciplines.size} reader disciplines"
 
   File.open("data/reader_academic_status", "w") do |file|
     file.puts "publication_id" + "\t" + "academic_status_id" + "\t" + "nbr_of_readers"  
@@ -94,6 +104,8 @@ def generate_data
     end  
   end
 
+  puts "Generated #{reader_statuses.size} reader statuses"
+
   File.open("data/journals", "w") do |file|
     file.puts "id" + "\t" + "name"  
     @journals.each_with_index do |journal, index|
@@ -101,19 +113,27 @@ def generate_data
     end
   end
 
+  puts "Generated #{@journals.size} journals"
+
   File.open("data/authors", "w") do |file|
     file.puts "id" + "\t" + "author_forename" + "\t" + "author_surname"  
-    @authors.each_with_index do |author, index|
-      file.puts "#{index + 1}\t#{author.split(':')[0]}\t#{author.split(':')[1]}"
+    @authors.each_pair do |author, id|
+      name = author.split(':')
+      file.puts "#{id + 1}\t#{name[0]}\t#{name[1]}"
     end
   end
+  
+  puts "Generated #{@authors.size} authors"
 
   File.open("data/publication_authors", "w") do |file|
     file.puts "publication_id" + "\t" + "author_id"  
     author_publications.each do |ap|
-      file.puts "#{ap[0]}\t#{@authors.index("#{ap[1]["forename"]}:#{ap[1]["surname"]}") + 1}"
+      key = "#{ap[1]["forename"]}:#{ap[1]["surname"]}"
+      file.puts "#{ap[0]}\t#{@authors[key] + 1}"
     end
   end
+  
+  puts "Generated #{author_publications.size} author publications"
 
 end
 
