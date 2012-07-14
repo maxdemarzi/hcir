@@ -22,10 +22,9 @@ def generate_data
     country_hash = json_hash["stats"]["country"]
     if country_hash
       countries.merge(country_hash.keys)
-      
-      country_hash.each do |ch|
-        ch[0] = "Unknown" if ch[0].empty?
-        reader_countries << [json_hash["id"], ch[0], ch[1]]  
+      country_hash.each_pair do |key, value|
+        key = "Unknown" if key == ""
+        reader_countries << [json_hash["id"], key, value]  
       end
     end
     
@@ -62,7 +61,8 @@ def generate_data
                             "published_in" => json_hash["published_in"] || "Unknown" }
                             
   end
-  @countries = countries.to_a
+  
+  @countries = countries.delete("").to_a
   @journals = {}
   journals.to_a.each_with_index do |journal, index|
     @journals["#{journal}"] = index
