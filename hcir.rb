@@ -137,7 +137,7 @@ def generate_data
   
   puts "Generated #{author_publications.size} author publications"
 
-  File.open("data/publication_details", "w") do |file|
+  File.open("data/publication_details", "w") do |file|                                                       #should have been journal_id
     file.puts "id" + "\t" + "title" + "\t" + "primary_author_id" + "\t" + "readers" + "\t" + "year" + "\t" + "publication_id"
     publication_details.each do |pd|
       file.puts "#{pd["id"]}\t#{pd["title"]}\t#{pd["primary_author_id"]}\t#{pd["readers"]}\t#{pd["year"]}\t#{@journals[pd["published_in"]] + 1}"

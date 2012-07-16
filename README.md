@@ -20,8 +20,8 @@ Cleaning Data
     tr -s '"' ' ' < publication_details > publication_details2
 
 
-Loading Data
-------------
+Extracting Data
+---------------
 
 	CREATE TABLE academic_status (id integer, name varchar(255));
 	COPY academic_status FROM '/tmp/academic_status' DELIMITER E'\t' CSV HEADER;
@@ -64,3 +64,56 @@ Loading Data
 
 	CREATE TABLE publication_details (id varchar(50), title varchar(500), primary_author_id integer, readers integer, year integer, publication_id integer);
 	COPY publication_details FROM '/tmp/publication_details2' DELIMITER E'\t' CSV HEADER;
+
+
+Transforming Data
+-----------------
+
+The Nodes:
+   
+    SELECT           row_number() OVER (ORDER BY id) as node_id, id, name INTO nodes_1_academic_status FROM academic_status ORDER BY id;
+    SELECT      15 + row_number() OVER (ORDER BY id) as node_id, id, forename, surname INTO nodes_2_authors FROM authors ORDER BY id;
+    SELECT  357891 + row_number() OVER (ORDER BY id) as node_id, id, name INTO nodes_3_countries FROM countries ORDER BY id;
+    SELECT  358070 + row_number() OVER (ORDER BY id) as node_id, id, name INTO nodes_4_disciplines FROM disciplines ORDER BY id; 
+    SELECT  358095 + row_number() OVER (ORDER BY id) as node_id, id, name INTO nodes_5_journals FROM journals ORDER BY id;
+    SELECT  400549 + row_number() OVER (ORDER BY id) as node_id, id, firstname, lastname, research_interests, main_discipline_id, biographical_info INTO nodes_6_profiles FROM profiles ORDER BY id;
+    SELECT 1428747 + row_number() OVER (ORDER BY id) as node_id, id, name INTO nodes_7_public_groups FROM public_groups ORDER BY id;
+    SELECT 1463945 + row_number() OVER (ORDER BY id) as node_id, id, title, readers, year INTO nodes_8_publications FROM publication_details ORDER BY id;
+
+The Relationships:
+
+    SELECT P.node_id AS start_node, D.node_id AS end_node, 'by_discipline' AS rel_type, nbr_of_readers
+    INTO rels_1_reader_disciplines
+    FROM reader_disciplines AS RD
+    INNER JOIN nodes_8_publications AS P ON RD.publication_id = P.id
+    INNER JOIN nodes_4_disciplines AS D ON RD.discipline_id = D.id
+    ORDER BY P.node_id, D.node_id;
+
+    SELECT P.node_id AS start_node, C.node_id AS end_node, 'by_country' AS rel_type, nbr_of_readers
+    INTO rels_2_reader_countries
+    FROM reader_countries AS RC
+    INNER JOIN nodes_8_publications AS P ON RD.publication_id = P.id
+    INNER JOIN nodes_3_countries AS C ON RC.country_id = D.id
+    ORDER BY P.node_id, C.node_id;
+
+    SELECT P.node_id AS start_node, C.node_id AS end_node, 'by_academic_status' AS rel_type, nbr_of_readers
+    INTO rels_3_reader_academic_status
+    FROM reader_countries AS RC
+    INNER JOIN nodes_8_publications AS P ON RD.publication_id = P.id
+    INNER JOIN nodes_1_academic_status AS A ON RC.country_id = D.id
+    ORDER BY P.node_id, A.node_id;
+
+    SELECT AS start_node, AS end_node, AS type, 
+    INTO _rels
+    FROM
+    INNER JOIN
+    ORDER BY ;
+
+
+The Graph
+---------
+
+    publication -[by_discipline]->      discipline 
+    publication -[by_country]->         country
+    publication -[by_academic_status]-> academic_status
+    
