@@ -22,8 +22,10 @@ Generating Data
 ------------
 
     sudo apt-get install postgresql
+    psql -U max -d template1
+    CREATE DATABASE hcir;
     rake data:generate
-    cp data /tmp
+    cp data/* /tmp
     copy all your data files (received from dropbox) to /tmp so Postgres can load them without issue
 
 Cleaning Data
@@ -86,14 +88,14 @@ Transforming Data
 
 The Nodes:
    
-    SELECT           row_number() OVER (ORDER BY id) as node_id, id, name INTO nodes_1_academic_status FROM academic_status ORDER BY id;
-    SELECT      15 + row_number() OVER (ORDER BY id) as node_id, id, forename, surname INTO nodes_2_authors FROM authors ORDER BY id;
-    SELECT  357891 + row_number() OVER (ORDER BY id) as node_id, id, name INTO nodes_3_countries FROM countries ORDER BY id;
-    SELECT  358070 + row_number() OVER (ORDER BY id) as node_id, id, name INTO nodes_4_disciplines FROM disciplines ORDER BY id; 
-    SELECT  358095 + row_number() OVER (ORDER BY id) as node_id, id, name INTO nodes_5_journals FROM journals ORDER BY id;
-    SELECT  400549 + row_number() OVER (ORDER BY id) as node_id, id, firstname, lastname, research_interests, main_discipline_id, biographical_info INTO nodes_6_profiles FROM profiles ORDER BY id;
-    SELECT 1428747 + row_number() OVER (ORDER BY id) as node_id, id, name INTO nodes_7_public_groups FROM public_groups ORDER BY id;
-    SELECT 1463945 + row_number() OVER (ORDER BY id) as node_id, id, title, readers, year INTO nodes_8_publications FROM publication_details ORDER BY id;
+    SELECT row_number() OVER (ORDER BY id) as node_id, id, name INTO nodes_1_academic_status FROM academic_status ORDER BY id;
+    SELECT (SELECT MAX(node_id) FROM nodes_1_academic_status) + row_number() OVER (ORDER BY id) as node_id, id, forename, surname INTO nodes_2_authors FROM authors ORDER BY id;
+    SELECT (SELECT MAX(node_id) FROM nodes_2_authors) + row_number() OVER (ORDER BY id) as node_id, id, name INTO nodes_3_countries FROM countries ORDER BY id;
+    SELECT (SELECT MAX(node_id) FROM nodes_3_countries) + row_number() OVER (ORDER BY id) as node_id, id, name INTO nodes_4_disciplines FROM disciplines ORDER BY id; 
+    SELECT (SELECT MAX(node_id) FROM nodes_4_disciplines) + row_number() OVER (ORDER BY id) as node_id, id, name INTO nodes_5_journals FROM journals ORDER BY id;
+    SELECT (SELECT MAX(node_id) FROM nodes_5_journals) + row_number() OVER (ORDER BY id) as node_id, id, firstname, lastname, research_interests, main_discipline_id, biographical_info INTO nodes_6_profiles FROM profiles ORDER BY id;
+    SELECT (SELECT MAX(node_id) FROM nodes_6_profiles) + row_number() OVER (ORDER BY id) as node_id, id, name INTO nodes_7_public_groups FROM public_groups ORDER BY id;
+    SELECT (SELECT MAX(node_id) FROM nodes_7_public_groups) + row_number() OVER (ORDER BY id) as node_id, id, title, readers, year INTO nodes_8_publications FROM publication_details ORDER BY id;
 
 The Relationships:
 
@@ -102,6 +104,7 @@ The Relationships:
     FROM reader_disciplines AS RD
     INNER JOIN nodes_8_publications AS P ON RD.publication_id = P.id
     INNER JOIN nodes_4_disciplines AS D ON RD.discipline_id = D.id
+    GROUP BY P.node_id, D.node_id, nbr_of_readers
     ORDER BY P.node_id, D.node_id;
 
     SELECT P.node_id AS start_node, C.node_id AS end_node, 'by_country'::varchar(255) AS rel_type, nbr_of_readers
@@ -109,6 +112,7 @@ The Relationships:
     FROM reader_countries AS RC
     INNER JOIN nodes_8_publications AS P ON RC.publication_id = P.id
     INNER JOIN nodes_3_countries AS C ON RC.country_id = C.id
+    GROUP BY P.node_id, C.node_id, nbr_of_readers
     ORDER BY P.node_id, C.node_id;
 
     SELECT P.node_id AS start_node, A.node_id AS end_node, 'by_academic_status'::varchar(255) AS rel_type, nbr_of_readers
@@ -116,12 +120,14 @@ The Relationships:
     FROM reader_academic_status AS RAS
     INNER JOIN nodes_8_publications AS P ON RAS.publication_id = P.id
     INNER JOIN nodes_1_academic_status AS A ON RAS.academic_status_id = A.id
+    GROUP BY P.node_id, A.node_id, nbr_of_readers
     ORDER BY P.node_id, A.node_id;
 
     SELECT A.node_id AS start_node, P.node_id AS end_node, 'has_profile'::varchar(255) AS rel_type
     INTO rels_4_author_profiles
     FROM nodes_2_authors AS A
     INNER JOIN nodes_6_profiles AS P ON A.forename = P.firstname AND A.surname = P.lastname
+    GROUP BY P.node_id, A.node_id
     ORDER BY P.node_id, A.node_id;
 
     SELECT P.node_id AS start_node, J.node_id AS end_node, 'published_in'::varchar(255) AS rel_type
@@ -129,6 +135,7 @@ The Relationships:
     FROM publication_details AS PD
     INNER JOIN nodes_8_publications AS P ON P.id = PD.id
     INNER JOIN nodes_5_journals AS J ON PD.publication_id = J.id
+    GROUP BY P.node_id, J.node_id
     ORDER BY P.node_id, J.node_id;
 
     SELECT P.node_id AS start_node, A.node_id AS end_node, 'authored_by'::varchar(255) AS rel_type
@@ -136,6 +143,7 @@ The Relationships:
     FROM publication_authors AS PA
     INNER JOIN nodes_8_publications AS P ON PA.publication_id = P.id
     INNER JOIN nodes_2_authors AS A ON PA.author_id = A.id
+    GROUP BY P.node_id, A.node_id
     ORDER BY P.node_id, A.node_id;
 
     SELECT P.node_id AS start_node, G.node_id AS end_node, 'member_of'::varchar(255) AS rel_type
@@ -143,12 +151,14 @@ The Relationships:
     FROM public_group_members AS PM
     INNER JOIN nodes_6_profiles AS P ON PM.profile_id = P.id
     INNER JOIN nodes_7_public_groups AS G ON PM.group_id = G.id
+    GROUP BY P.node_id, G.node_id
     ORDER BY P.node_id, G.node_id;
 
     SELECT P.node_id AS start_node, D.node_id AS end_node, 'interested_in'::varchar(255) AS rel_type
     INTO rels_8_profile_disciplines
     FROM nodes_6_profiles AS P
     INNER JOIN nodes_4_disciplines AS D ON P.main_discipline_id = D.id
+    GROUP BY P.node_id, D.node_id
     ORDER BY P.node_id, D.node_id;
 
     SELECT P1.node_id AS start_node, P2.node_id AS end_node, 'knows'::varchar(255) AS rel_type
@@ -156,6 +166,7 @@ The Relationships:
     FROM contacts AS C
     INNER JOIN nodes_6_profiles AS P1 ON C.id1 = P1.id
     INNER JOIN nodes_6_profiles AS P2 ON C.id2 = P2.id
+    GROUP BY P1.node_id, P2.node_id
     ORDER BY P1.node_id, P2.node_id;
 
 Loading Data
@@ -164,7 +175,7 @@ Loading Data
 	psql -c "copy (SELECT node_id, name, 'academic_status' AS type
 	FROM nodes_1_academic_status
 	UNION ALL
-	SELECT node_id, forename || ' ' || surname AS name, 'author'
+	SELECT node_id, ltrim(coalesce(forename,'') || ' ' || coalesce(surname,'') ) AS name, 'author'
 	FROM nodes_2_authors
 	UNION ALL
 	SELECT node_id, name, 'country'
@@ -176,7 +187,7 @@ Loading Data
 	SELECT node_id, name, 'journal'
 	FROM nodes_5_journals
 	UNION ALL
-	SELECT node_id, firstname || ' ' || lastname AS name, 'profile'
+	SELECT node_id, ltrim(coalesce(firstname,'') || ' ' || coalesce(lastname,'') ) AS name, 'profile'
 	FROM nodes_6_profiles
 	UNION ALL
 	SELECT node_id, name, 'group'
